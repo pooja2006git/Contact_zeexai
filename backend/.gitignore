@@ -1,0 +1,22 @@
+# Node modules / packages
+node_modules/
+packages/
+
+# Environment files
+.env
+SETUP_ENV.md
+SETUP_VERIFIED_DOMAIN.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Optional: build / dist folders
+dist/
+build/
