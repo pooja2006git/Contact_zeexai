@@ -19,30 +19,99 @@ export default function ApplyModal({ isOpen, onClose, role }: ApplyModalProps) {
   const [uploadType, setUploadType] = useState<'resume' | 'coverLetter' | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setUploadedFile(e.target.files[0]);
+      // Clear error when file is selected
+      if (error) setError(null);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      onClose();
-      setFormData({ fullName: '', email: '', phone: '', experience: '0' });
-      setUploadType(null);
-      setUploadedFile(null);
-    }, 3000);
+    setError(null);
+    
+    // Validate file upload
+    if (!uploadType) {
+      setError('Please select a document type (Resume or Cover Letter).');
+      return;
+    }
+    
+    if (!uploadedFile) {
+      setError('Please upload a document.');
+      return;
+    }
+
+    // Validate position
+    if (!role || !role.title) {
+      setError('Position information is missing.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Clean phone number: remove all non-digit characters (spaces, dashes, country codes, etc.)
+      const cleanedPhone = formData.phone.replace(/\D/g, '');
+      
+      // Prepare FormData for multipart/form-data submission
+      const formDataToSend = new FormData();
+      formDataToSend.append('fullName', formData.fullName.trim());
+      formDataToSend.append('email', formData.email.trim());
+      formDataToSend.append('phone', cleanedPhone);
+      formDataToSend.append('position', role.title);
+      formDataToSend.append('experience', formData.experience);
+      formDataToSend.append('resume', uploadedFile);
+
+      // Send to backend API
+      const response = await fetch('http://127.0.0.1:8000/api/applications/', {
+        method: 'POST',
+        body: formDataToSend,
+        // Don't set Content-Type header - browser will set it with boundary for FormData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors from backend
+        if (data.errors) {
+          const errorMessages = Object.values(data.errors).flat() as string[];
+          setError(errorMessages.join(', ') || 'Validation failed. Please check your inputs.');
+        } else {
+          setError(data.message || 'Failed to submit application. Please try again.');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - show success message
+      setIsSubmitted(true);
+      setTimeout(() => {
+        setIsSubmitted(false);
+        onClose();
+        setFormData({ fullName: '', email: '', phone: '', experience: '0' });
+        setUploadType(null);
+        setUploadedFile(null);
+        setError(null);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Error submitting application:', err);
+      setError('Network error. Please check if the backend server is running and try again.');
+      setIsLoading(false);
+    }
   };
 
   if (!role) return null;
@@ -98,6 +167,15 @@ export default function ApplyModal({ isOpen, onClose, role }: ApplyModalProps) {
                   </motion.div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm"
+                      >
+                        {error}
+                      </motion.div>
+                    )}
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -285,13 +363,16 @@ export default function ApplyModal({ isOpen, onClose, role }: ApplyModalProps) {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.6 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={!isLoading ? { scale: 1.02 } : {}}
+                      whileTap={!isLoading ? { scale: 0.98 } : {}}
                       type="submit"
-                      className="w-full relative group bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-600 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-500 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_30px_rgba(34,211,238,0.4)] hover:shadow-[0_0_60px_rgba(34,211,238,0.8)] transition-all duration-300 overflow-hidden"
+                      disabled={isLoading}
+                      className="w-full relative group bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-600 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-500 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_30px_rgba(34,211,238,0.4)] hover:shadow-[0_0_60px_rgba(34,211,238,0.8)] transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 translate-x-[-100%] group-hover:translate-x-[100%] transition-all duration-1000" />
-                      <span className="relative">Submit Application</span>
+                      <span className="relative">
+                        {isLoading ? 'Submitting...' : 'Submit Application'}
+                      </span>
                     </motion.button>
                   </form>
                 </>
