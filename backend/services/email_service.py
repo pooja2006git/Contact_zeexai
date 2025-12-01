@@ -94,12 +94,12 @@ def send_email(to_email, subject, message_body, sender_name="Contact Form"):
     </head>
     <body>
         <div class="content">
-            <h2>Hello {html.escape(sender_name)},</h2>
-            <p>Thank you for contacting us. We have received your message:</p>
+            <h2>Hello , I am {html.escape(sender_name)},</h2>
+            <p>Message from ZeexAI Website:</p>
             <div class="message">
                 {escaped_message}
             </div>
-            <p>We will get back to you soon!</p>
+            <p>Looking forward to hearing from you!</p>
         </div>
     </body>
     </html>
