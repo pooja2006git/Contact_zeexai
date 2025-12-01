@@ -276,7 +276,7 @@ function ContactUs() {
                   className={`w-full px-4 py-3 bg-gray-900/50 border ${
                     errors.email ? 'border-red-500' : 'border-gray-700'
                   } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all duration-300`}
-                  placeholder="your.email@example.com"
+                  placeholder="contactperson.email@example.com"
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-400">{errors.email}</p>
